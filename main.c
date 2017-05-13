@@ -1,48 +1,50 @@
 #include <stdlib.h>
 #include <stdio.h>
-
 #include "functions.h"
+#include <mpi.h>
+#include <math.h>
+#include <sys/time.h> 
+
+int main(int argc, char *argv[])  {
 
 
-/*
-int sudoku_size=0;
-int *ptr_sudoku_size=NULL,*Board=NULL;
-int *solved_board=NULL;
-*/
+    int rank, nproc;   
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &nproc);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-int main(){
+
+    if (rank==MASTER){
+
+        printf("\nParallel Quicksort\n");
+        printf("\nwhat would you like to do");
     
-
-    printf("\nParallel Quicksort\n");
-    printf("\nwhat would you like to do");
-    
-    while(1)
-    {
-        switch(UserChoice()){
-            case 1: {                  
-                    
-                    printf("Solve serial \n" );  
-
-                    break;}
-            case 2: {                
-                    printf("Solve naive \n" );  
-                    break;}
-            case 3: {
-                    printf("Solve non naive \n" );  
-                    break;}
-            case 4:{
-                    exit(0);
-                    
-                    }
-            
-            default: {
-                     
-                     printf("Possible error in input. Exiting");
-                     exit(0);}
+        while(1)
+        {
+            switch(UserChoice()){
+                case 1: {          
+                        Serial_Qsort();                 
+                        printf("Solve serial \n" );
+                        break;}
+                case 2: {                
+                        printf("Solve naive \n" );  
+                        break;}
+                case 3: {
+                        printf("Solve non naive \n" );  
+                        break;}
+                case 4:{exit(0);}           
+                default: {                     
+                        printf("Possible error in input. Exiting");
+                        MPI_Finalize();
+                        exit(0);}
+            }
         }
-
+    }else{
+        MPI_Finalize();
     }
+
     return 0;
+    
 }
 
 int UserChoice(void){

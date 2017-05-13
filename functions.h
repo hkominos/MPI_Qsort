@@ -2,14 +2,16 @@
 #define FUNCTIONS_H_
 
 
-#define INVALID                 0
-#define MADE_PROGRESS           1
-#define DID_NOT_MAKE_PROGRESS   2
+#define MASTER                  0
 
 #define YES                     1
 #define NO                      0
 
     
 int UserChoice(void);
+void Serial_Qsort(void);
+int isSorted(int *Array, int size);
+void myqsort(int low, int high,int *Array);
+int partition(int low, int high, int* Array);
 
 #endif /* FUNCTIONS_H_ */
