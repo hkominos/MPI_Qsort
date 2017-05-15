@@ -13,8 +13,8 @@ void Serial_Qsort(void);
 int isSorted(int *Array, int size);
 void myqsort(int low, int high,int *Array);
 int partition(int low, int high, int* Array);
-int *merge_arrays(void *array1, int *array2, int array_size);
-
+int *merge_arrays(int* array1, int *array2, int array_size);
+//void* merge_arrays(int *array1, int *array2, int array_size,int* new_array_ptr);
 
 
 

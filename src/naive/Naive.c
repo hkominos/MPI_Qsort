@@ -12,7 +12,7 @@ int main(int argc, char *argv[])  {
 
 
     int rank, nproc,array_size,i,local_array_size;
-    int *Array,*local_array,*rcv_array;
+    int *Array,*local_array,*received_array;
     double start_time,total;   
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
@@ -46,18 +46,12 @@ int main(int argc, char *argv[])  {
             Array[i] = drand48() * 1000000;
         }
     }    
-
-    for (i=0;i<array_size;i++){
-            printf("%d\n",Array[i] );
-        }
-
+    
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&array_size, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     local_array_size = array_size/nproc;
-    if (array_size % nproc){
-        local_array_size++;
-    }
+
 
     local_array=(int*)calloc(local_array_size , sizeof(int));
     MPI_Scatter(Array, local_array_size, MPI_INT, local_array, local_array_size, MPI_INT, 0, MPI_COMM_WORLD);
@@ -71,7 +65,7 @@ int main(int argc, char *argv[])  {
     int dest=1;
     for(i=1;i<=steps;i++){
         
-        int new_array_size=local_array_size*i;
+        int new_array_size=local_array_size*dest;
         
         if (rank % (2*i)){
             MPI_Send(local_array, new_array_size, MPI_INT, rank-dest, 10*i, MPI_COMM_WORLD); 
@@ -79,25 +73,12 @@ int main(int argc, char *argv[])  {
         }
     
         else {
-            rcv_array=(int*)calloc(new_array_size , sizeof(int));
-            MPI_Recv(rcv_array, new_array_size, MPI_INT, rank+dest, 10*i, MPI_COMM_WORLD, &status);
-            sleep(2);
-            printf("\n\n\n\n");
-
-            //printf("new array size is %d and step is  %d  proc %d\n",new_array_size,i,rank )
-            printf("Value send is %lf value point by is %d",&local_array,local_array[0] );;
-            local_array=merge_arrays(&local_array,rcv_array,new_array_size);
-            //local_array=merge(local_array,new_array_size,rcv_array,new_array_size);
-            free(rcv_array);
-      
-        }
-
-
-        
-
-
-    dest=2*i;
-        
+            received_array=(int*)calloc(new_array_size , sizeof(int));
+            MPI_Recv(received_array, new_array_size, MPI_INT, rank+dest, 10*i, MPI_COMM_WORLD, &status);            
+            local_array=merge_arrays(local_array,received_array,new_array_size);            
+            free(received_array);      
+        }       
+    dest=2*i;        
     }
 
 
@@ -105,17 +86,20 @@ int main(int argc, char *argv[])  {
        
     //UserChoice();
     MPI_Barrier(MPI_COMM_WORLD);
-    MPI_Finalize();
+    
 
-    free(local_array);
     if (rank==0){
-        //free(Array);
-printf("\n\n\n\n");
-    for (i=0;i<array_size;i++){
-            printf("%d\n",Array[i] );
-        }
+
+        int Result=isSorted(local_array,array_size);
+        if (Result==1)printf("Array Sorted. Exiting");
+        free(local_array);
 
     }
+    else{
+        if (local_array!=NULL)free(local_array);
+    }
+
+    MPI_Finalize();
     
     exit(0);
 
@@ -124,30 +108,17 @@ printf("\n\n\n\n");
 
 
 
-int *merge_arrays(void *headarray1, int *array2, int array_size){
+int* merge_arrays(int *array1, int *array2, int array_size){
 
-    int *array1=(int*)headarray1;
-    printf("Value received is %lf value point by is %d",headarray1,array1 );
+    int* new_array=(int*)calloc(array_size*2 , sizeof(int));
+
+   
+    
     int start_of_array1=array1[0];
     int start_of_array2=array2[0];
     int i;
     int index_1=0;
     int index_2=0;
-
-    printf("Array1 is\n");
-
-    for (i=0;i<array_size;i++){
-            printf("%d\n",array1[i] );
-        }
-
-        sleep(2);
-            printf("\n\n\n\n");
-            printf("Array2 is\n");
-
-    for (i=0;i<array_size;i++){
-            printf("%d\n",array2[i] );
-        }
-
    
 
     if(start_of_array2<start_of_array1){
@@ -155,12 +126,7 @@ int *merge_arrays(void *headarray1, int *array2, int array_size){
         array2=array1;
         array1=temp;
     }
-
-
-
- 
-
-    int* new_array=(int*)calloc(array_size*2 , sizeof(int));
+   
     
    for(i=0;i<array_size*2;i++){
 
@@ -188,20 +154,7 @@ int *merge_arrays(void *headarray1, int *array2, int array_size){
    
 
 
-
-
-
-
-
-   }
-   sleep(2);
-   printf("\n\n\n\n");
-            printf("final is\n");
-   
-   for (i=0;i<array_size*2;i++){
-            printf("%d\n",new_array[i] );
-        }
-
+   }        
    
     return new_array;
 
