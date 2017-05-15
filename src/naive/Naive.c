@@ -35,19 +35,21 @@ int main(int argc, char *argv[])  {
             MPI_Abort(MPI_COMM_WORLD,1);
             exit(0);}
 
-        //for testing
-        //array_size =50000 
+        //largest in supported without overflow is 2,147,483,647
+        
 
         Array = (int*)calloc(array_size , sizeof(int));
 
         srand48((unsigned int)time(NULL));
         // Initialize the array with random values
         for (i=0;i<array_size;i++){
-            Array[i] = drand48() * 1000000;
+            Array[i] = drand48() * 100000000;
+
+
         }
     }    
-    
-    MPI_Barrier(MPI_COMM_WORLD);
+
+    //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&array_size, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
     local_array_size = array_size/nproc;
@@ -80,20 +82,18 @@ int main(int argc, char *argv[])  {
         }       
     dest=2*i;        
     }
-
-
-
        
-    //UserChoice();
+    
     MPI_Barrier(MPI_COMM_WORLD);
     
 
     if (rank==0){
-
+        total = MPI_Wtime() - start_time;
+        printf("\nTotal time taken: %f seconds",total);
         int Result=isSorted(local_array,array_size);
-        if (Result==1)printf("Array Sorted. Exiting");
+        if (Result==YES)printf("Array Sorted! \n");
         free(local_array);
-
+        UserChoice();
     }
     else{
         if (local_array!=NULL)free(local_array);
@@ -165,7 +165,7 @@ int* merge_arrays(int *array1, int *array2, int array_size){
 
 int UserChoice(void){
     int user_choice;
-    printf( "Press any key to exit\n");
+    printf( "Press any key and enter to exit\n");
 
     scanf("%d",&user_choice);
     fflush(stdin);
