@@ -21,7 +21,8 @@ int main(int argc, char *argv[])  {
     
     MPI_Status status;
 
-      
+    
+    
     
     if (rank == 0){
 
@@ -56,9 +57,8 @@ int main(int argc, char *argv[])  {
 
     local_array=(int*)calloc(local_array_size , sizeof(int));
     MPI_Scatter(Array, local_array_size, MPI_INT, local_array, local_array_size, MPI_INT, 0, MPI_COMM_WORLD);
-    myqsort(0,local_array_size-1,local_array);
+    
 
-   
 
     int steps=(int)log2((int)nproc);
 
@@ -66,20 +66,7 @@ int main(int argc, char *argv[])  {
     int dest=1;
     for(i=1;i<=steps;i++){
         
-        int new_array_size=local_array_size*dest;
         
-        if (rank % (2*i)){
-            MPI_Send(local_array, new_array_size, MPI_INT, rank-dest, 10*i, MPI_COMM_WORLD); 
-            break;
-        }
-    
-        else {
-            received_array=(int*)calloc(new_array_size , sizeof(int));
-            MPI_Recv(received_array, new_array_size, MPI_INT, rank+dest, 10*i, MPI_COMM_WORLD, &status);            
-            local_array=merge_arrays(local_array,received_array,new_array_size);            
-            free(received_array);      
-        }       
-    dest=2*i;        
     }
        
     
