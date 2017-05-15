@@ -18,8 +18,9 @@ void Serial_Qsort(void){
     double start_time,total;
     start_time = MPI_Wtime();  
 
-    int *Array = (int*)calloc(array_size , sizeof(double));
+    int *Array = (int*)calloc(array_size , sizeof(int));
         // Initialize the array with random values
+        srand48((unsigned int)time(NULL));
         for (i=0;i<array_size;i++){
             Array[i] = drand48() * 1000000;
         }
