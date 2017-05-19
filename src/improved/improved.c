@@ -5,23 +5,25 @@
 #include <time.h> 
 #include <unistd.h>
 #include <math.h>
+#include <string.h>
 
-int *merge(int *v1, int n1, int *v2, int n2);
+//int *merge(int *v1, int n1, int *v2, int n2);
 
 int main(int argc, char *argv[])  {
 
 
-    int rank, nproc,array_size,i,local_array_size;
-    int *Array,*local_array,*received_array;
+    int rank, nproc,array_size,i,chunk_size,global_pivot,current_rank;
+    int *Array,*local_array;
+    //*received_array;
     double start_time,total;   
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &nproc);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     
-    MPI_Status status;
+    //MPI_Status status;
 
-    
+    MPI_Comm current_comm;    
     
     
     if (rank == 0){
@@ -43,30 +45,70 @@ int main(int argc, char *argv[])  {
         srand48((unsigned int)time(NULL));
         // Initialize the array with random values
         for (i=0;i<array_size;i++){
-            Array[i] = drand48() * 100000000;
-
+            //Array[i] = drand48() * 100000000;
+            Array[i] = drand48() * 100;
 
         }
     }    
 
     //MPI_Barrier(MPI_COMM_WORLD);
     MPI_Bcast(&array_size, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    local_array_size = array_size/nproc;
-
-
-    local_array=(int*)calloc(local_array_size , sizeof(int));
-    MPI_Scatter(Array, local_array_size, MPI_INT, local_array, local_array_size, MPI_INT, 0, MPI_COMM_WORLD);
+    chunk_size = array_size/nproc;
+    local_array=(int*)calloc(chunk_size , sizeof(int));
+    MPI_Scatter(Array, chunk_size, MPI_INT, local_array, chunk_size, MPI_INT, 0, MPI_COMM_WORLD);
     
-
+    //const int MAX_NUMBERS = chunk_size*nproc;
 
     int steps=(int)log2((int)nproc);
+ 
+
 
     //steps=2;
-    int dest=1;
+    //int dest=1;
+    
+
+    
+    MPI_Comm_dup( MPI_COMM_WORLD, &current_comm );
+    MPI_Comm_rank(current_comm, &current_rank);
+
+    int current_array_size=chunk_size;
+    int* low_array=NULL;
+    int* high_array=NULL;
+    int low_array_size=0;
+    int high_array_size=0;
+      
     for(i=1;i<=steps;i++){
+        if(current_rank==0){global_pivot=local_array[2];}
+        MPI_Bcast(&global_pivot, 1, MPI_INT, 0, current_comm);
+
+        //printf("I received %d and %d %d \n",low, high, Array[0]);
+        if(current_rank==0){sleep(5);
+                        printf("\n\n\n");
+                        }
+        partition_with_pivot(0,current_array_size,local_array,global_pivot,&low_array,&high_array,&low_array_size,&high_array_size,current_rank);
+
+        printf("Sizes received are high %d and low %d\n",high_array_size,low_array_size );
+
+         printf("low array is \n");
+        for(i=0;i<=low_array_size-1;i++){
+            
+            printf("%d\n",low_array[i]);
+            }
+
+
+            printf("hign array is \n");
+        for(i=0;i<=high_array_size-1;i++){
+            printf("%d\n",high_array[i]);
+            
+            }
+
+       
         
+
+
+          
         
+
     }
        
     
@@ -90,6 +132,131 @@ int main(int argc, char *argv[])  {
     exit(0);
 
 }
+
+
+
+
+void partition_with_pivot(int low, int high, int* Array,int pivot,int** low_array, int** high_array, int* low_array_size, int* high_array_size,int current_rank){
+    int i,temp_value;   
+
+    for(i=0;i<=high-1;i++){
+            printf("%d\n",Array[i]);
+            } 
+
+    if(current_rank==0){
+        for(i=low;i<=high-1;i++){
+            if(Array[i]==pivot){
+                swap(i,high-1,Array);
+                break;
+            }
+
+        }
+    }else{
+    
+    temp_value=Array[high-1];
+    Array[high-1]=pivot;
+
+    }
+
+    int index=low;
+    int steps=0;
+
+    
+    
+    for(i=low;i<=high-2;i++){
+
+        if(Array[i]<=pivot){
+            swap(i,index,Array);
+            index++;
+        }
+        steps++;        
+    }
+
+    if (index!=low)
+    swap(index,high-1,Array);
+    
+    else if(index==low && steps!=0)
+        swap(index,high-1,Array);
+
+
+    if(current_rank!=0){
+        if (temp_value<=pivot){
+            
+            Array[index]=temp_value;
+            *low_array_size=index+1;
+            *high_array_size=high-*low_array_size;
+        }else{
+            
+            Array[index]=temp_value;
+            *low_array_size=index;
+            *high_array_size=high-*low_array_size;
+        }
+    }
+    else{
+
+        *low_array_size=index+1;
+        *high_array_size=high-*low_array_size;
+    }
+   
+
+    int lowsize=*low_array_size;
+    int highsize=*high_array_size;
+    
+    
+
+
+
+    if(lowsize!=0 && high_array_size!=0){
+    *low_array=(int *)malloc(sizeof(int)*lowsize);
+    memcpy(*low_array, Array, sizeof(int)*lowsize);
+    *high_array=(int *)malloc(sizeof(int)*highsize);
+    memcpy(*high_array, &Array[lowsize], sizeof(int)*highsize);
+   
+    
+    }else if(lowsize==0 && highsize!=0){
+
+        *high_array=(int *)malloc(sizeof(int)*highsize);
+        memcpy(*high_array, Array, sizeof(int)*highsize);       
+
+
+    }else {
+
+    *low_array=(int *)malloc(sizeof(int)*lowsize);
+    memcpy(*low_array, Array, sizeof(int)*lowsize);
+
+
+    }
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int _getelement(){
+    return 2;
+}
+
 
 
 
@@ -203,3 +370,5 @@ int partition(int low, int high, int* Array) {
     swap(index,high,Array);
     return index;
 }
+
+
