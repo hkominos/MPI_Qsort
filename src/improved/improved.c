@@ -44,6 +44,7 @@ int main(int argc, char *argv[])  {
         // Initialize the array with random values
         for (i=0;i<array_size;i++){
             Array[i] = drand48() * MULTIPLIER;
+            //printf("%d\n",Array[i] );
             //Array[i] = drand48() * 100 //interesting performance deterioration !;
           }
     }     
@@ -81,12 +82,9 @@ int main(int argc, char *argv[])  {
     for(i=1;i<=steps;i++){
         int middle=current_nproc/2;
         if(current_rank==0){global_pivot=_getelement(local_array,i,current_array_size,color,rank,current_nproc, nproc);}
-        MPI_Bcast(&global_pivot, 1, MPI_INT, 0, current_comm);
-        
+        MPI_Bcast(&global_pivot, 1, MPI_INT, 0, current_comm);        
         partition_with_pivot(0,current_array_size,local_array,global_pivot,&low_array,&high_array,&low_array_size,&high_array_size,current_rank);
-        if (local_array!=NULL && current_array_size!=0){free(local_array);local_array=NULL;}
-
-        
+        if (local_array!=NULL && current_array_size!=0){free(local_array);local_array=NULL;}     
 
         if (current_rank<middle){ 
 
@@ -94,13 +92,11 @@ int main(int argc, char *argv[])  {
             MPI_Probe(current_rank+middle, MPI_LOW_TAG, current_comm, &status); 
             MPI_Get_count(&status, MPI_INT, &received_array_size);
             received_array=(int*)malloc(received_array_size * sizeof(int));
-            MPI_Recv(received_array, received_array_size, MPI_INT, current_rank+middle, MPI_LOW_TAG, current_comm, &status);
-            MPI_Get_count(&status, MPI_INT, &received_array_size);                   
+            MPI_Recv(received_array, received_array_size, MPI_INT, current_rank+middle, MPI_LOW_TAG, current_comm, &status);                              
             local_array=merge_arrays(low_array,low_array_size,received_array,received_array_size);
             if(high_array_size!=0)free(high_array);high_array=NULL;
-            current_array_size=received_array_size+low_array_size;            
+            current_array_size=received_array_size+low_array_size;        
            
-                
         }else
         {    
 
@@ -108,15 +104,12 @@ int main(int argc, char *argv[])  {
             MPI_Get_count(&status, MPI_INT, &received_array_size);
             received_array=(int*)malloc(received_array_size * sizeof(int));        
             MPI_Recv(received_array, received_array_size, MPI_INT, current_rank-middle, MPI_HIGH_TAG, current_comm, &status);           
-            MPI_Get_count(&status, MPI_INT, &received_array_size);
             MPI_Send(low_array, low_array_size, MPI_INT, current_rank-middle, MPI_LOW_TAG, current_comm); 
             if(low_array_size!=0)free(low_array); low_array=NULL;         
             local_array=merge_arrays(high_array,high_array_size,received_array,received_array_size);
             current_array_size=received_array_size+high_array_size;
                 
         }
-
-
         
         if (current_rank<middle){color=LOW_SET;}
             else{color=HIGH_SET;}        
@@ -129,19 +122,20 @@ int main(int argc, char *argv[])  {
 
     }
 
-   
-    myqsort(0, current_array_size-1,local_array);
+    
+    myqsort(0,current_array_size-1,local_array);
     printf("Processor with rank %d and total size to sort %d reports %d with total time %lf\n",rank,current_array_size,isSorted(local_array,current_array_size),MPI_Wtime() - start_time) ;
-    if (local_array!=NULL)free(local_array);
+    
     
     /*
     sleep(rank+2);
-    printf("rank %d \n\n\n\n",rank);
+    printf("Final array by%d below \n\n\n\n",rank);
+    
     for(i=0;i<=current_array_size-1;i++){
             printf("%d\n",local_array[i]);
                         }      
     */
-       
+    if (local_array!=NULL)free(local_array);   
     MPI_Comm_free(&current_comm);
     MPI_Barrier(MPI_COMM_WORLD);
     
@@ -159,8 +153,6 @@ int _getelement(int* local_array,int steps,int current_array_size,int color,int 
     int position=current_array_size-1;
     int LOW_SET=1;
     int HIGH_SET=10;
-
-
     int chunk=MULTIPLIER/nproc;
     int floor=rank*chunk;
     int ceilling=floor+current_nproc*chunk;
@@ -184,8 +176,6 @@ int _getelement(int* local_array,int steps,int current_array_size,int color,int 
         position=_find_closest_tomedian(local_array,current_array_size,probable_median);
         //printf("median found is%d\n", local_array[position]);
     }
-
-    
 
     return local_array[position];
 }
@@ -216,7 +206,6 @@ int _find_closest_tomedian(int* local_array,int current_array_size,int probable_
 
 void partition_with_pivot(int low, int high, int* Array,int pivot,int** low_array, int** high_array, int* low_array_size, int* high_array_size,int current_rank){
     int i,temp_value;   
-
 
     if(current_rank==0){
         for(i=low;i<=high-1;i++){
@@ -302,8 +291,6 @@ void partition_with_pivot(int low, int high, int* Array,int pivot,int** low_arra
 
 
 int* merge_arrays(int *array1, int array1_size,int *array2, int array2_size){
-
-    //printf("sizes are %d and %d \n",array1_size,array2_size );
 
     int* new_array=(int*)malloc((array1_size+array2_size)* sizeof(int));
     int i,temp;
