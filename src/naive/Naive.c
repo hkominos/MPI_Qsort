@@ -19,9 +19,7 @@ int main(int argc, char *argv[])  {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     
-    MPI_Status status;
-
-      
+    MPI_Status status;      
     
     if (rank == 0){
 
@@ -37,14 +35,12 @@ int main(int argc, char *argv[])  {
         //largest in supported without overflow is 2,147,483,647
         
         start_time = MPI_Wtime();
-        Array = (int*)calloc(array_size , sizeof(int));
+        Array = (int*)malloc(array_size * sizeof(int));
 
         srand48((unsigned int)time(NULL));
         // Initialize the array with random values
         for (i=0;i<array_size;i++){
             Array[i] = drand48() * 100000000;
-
-
         }
     }    
 
@@ -54,8 +50,10 @@ int main(int argc, char *argv[])  {
     local_array_size = array_size/nproc;
 
 
-    local_array=(int*)calloc(local_array_size , sizeof(int));
+    local_array=(int*)malloc(local_array_size * sizeof(int));
     MPI_Scatter(Array, local_array_size, MPI_INT, local_array, local_array_size, MPI_INT, 0, MPI_COMM_WORLD);
+    if(rank==0)
+        free(Array);
     myqsort(0,local_array_size-1,local_array);
 
    
@@ -74,9 +72,11 @@ int main(int argc, char *argv[])  {
         }
     
         else {
-            received_array=(int*)calloc(new_array_size , sizeof(int));
+            received_array=(int*)malloc(new_array_size * sizeof(int));
             MPI_Recv(received_array, new_array_size, MPI_INT, rank+dest, 10*i, MPI_COMM_WORLD, &status);            
-            local_array=merge_arrays(local_array,received_array,new_array_size);            
+            int *temp=merge_arrays(local_array,received_array,new_array_size);
+            free(local_array);
+            local_array=temp;            
             free(received_array);      
         }       
     dest=2*i;        
@@ -98,6 +98,7 @@ int main(int argc, char *argv[])  {
         if (local_array!=NULL)free(local_array);
     }
 
+    //MPI_Comm_free(&MPI_COMM_WORLD[]);
     MPI_Finalize();
     
     exit(0);
@@ -109,7 +110,7 @@ int main(int argc, char *argv[])  {
 
 int* merge_arrays(int *array1, int *array2, int array_size){
 
-    int* new_array=(int*)calloc(array_size*2 , sizeof(int));
+    int* new_array=(int*)malloc(array_size*2 * sizeof(int));
 
    
     
@@ -153,8 +154,9 @@ int* merge_arrays(int *array1, int *array2, int array_size){
    
 
 
-   }        
-   
+   }     
+
+    //free(array1);
     return new_array;
 
 }

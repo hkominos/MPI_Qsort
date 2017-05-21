@@ -5,33 +5,37 @@
 #include <string.h>
 #include "functions.h"
 #include <mpi.h>
+#include <time.h>  
 
 
 
 
 void Serial_Qsort(void){
+
+
+
     int i,array_size;
     printf( "Give array size\n");
     scanf("%d",&array_size);
     fflush(stdin);
 
     double start_time,total;
-    start_time = MPI_Wtime();  
+      
 
-    int *Array = (int*)calloc(array_size , sizeof(int));
+    int *Array = (int*)malloc(array_size * sizeof(int));
         // Initialize the array with random values
         srand48((unsigned int)time(NULL));
         for (i=0;i<array_size;i++){
-            Array[i] = drand48() * 1000000;
+            Array[i] = drand48() * 100000000;
         }
+        start_time = MPI_Wtime();
         myqsort(0, array_size-1,Array);
         if (isSorted(Array,array_size))printf("table sorted! ");
         free(Array);
 
+        
         total = MPI_Wtime() - start_time;
-        printf("\nTotal time taken: %f seconds",total);
-    
-
+        printf("\nTotal time taken: %f seconds",total);    
 
 }
 
