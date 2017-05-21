@@ -7,6 +7,8 @@
 #include <math.h>
 #include <string.h>
 
+const int MULTIPLIER = 100000000;
+                     
 
 
 int main(int argc, char *argv[])  {
@@ -41,7 +43,7 @@ int main(int argc, char *argv[])  {
         srand48((unsigned int)time(NULL));
         // Initialize the array with random values
         for (i=0;i<array_size;i++){
-            Array[i] = drand48() * 100000000;
+            Array[i] = drand48() * MULTIPLIER;
             //Array[i] = drand48() * 100 //interesting performance deterioration !;
           }
     }     
@@ -68,19 +70,23 @@ int main(int argc, char *argv[])  {
     int low_array_size=0;
     int high_array_size=0;
     int MPI_LOW_TAG=111;
-    int MPI_HIGH_TAG=222;
+    int MPI_HIGH_TAG=222;    
+    int received_array_size=0;
+    
+    int color=-1;
     int LOW_SET=1;
     int HIGH_SET=10;
-    int received_array_size=0;
+
       
     for(i=1;i<=steps;i++){
-        if(current_rank==0){global_pivot=local_array[2];}
+        int middle=current_nproc/2;
+        if(current_rank==0){global_pivot=_getelement(local_array,i,current_array_size,color,rank,current_nproc, nproc);}
         MPI_Bcast(&global_pivot, 1, MPI_INT, 0, current_comm);
         
         partition_with_pivot(0,current_array_size,local_array,global_pivot,&low_array,&high_array,&low_array_size,&high_array_size,current_rank);
         if (local_array!=NULL && current_array_size!=0){free(local_array);local_array=NULL;}
 
-        int middle=current_nproc/2;
+        
 
         if (current_rank<middle){ 
 
@@ -111,45 +117,26 @@ int main(int argc, char *argv[])  {
         }
 
 
-        int color;
-        if (current_rank<middle){color=LOW_SET;}
-            else{color=HIGH_SET;}
-
         
+        if (current_rank<middle){color=LOW_SET;}
+            else{color=HIGH_SET;}        
 
         MPI_Comm_split(current_comm, color, current_rank, &new_comm);
-
         MPI_Comm_dup( new_comm, &current_comm );
         MPI_Comm_rank(current_comm, &current_rank);
         MPI_Comm_size(current_comm, &current_nproc);
-
-        /*
-        for(i=0;i<=current_array_size-1;i++){            
-            printf("%d\n",low_array[i]);
-        printf("Sizes received are high %d and low %d\n",high_array_size,low_array_size );
-         printf("low array is \n");
-        for(i=0;i<=low_array_size-1;i++){            
-            printf("%d\n",low_array[i]);
-            }
-            printf("hign array is \n");
-        for(i=0;i<=high_array_size-1;i++){
-            printf("%d\n",high_array[i]);
-                        }      
-        
-         }*/
-
-
+        MPI_Comm_free(&new_comm);
 
     }
 
    
     myqsort(0, current_array_size-1,local_array);
-    printf("Processor with rank %d reports %d with total time %lf\n",rank,isSorted(local_array,current_array_size),MPI_Wtime() - start_time) ;
+    printf("Processor with rank %d and total size to sort %d reports %d with total time %lf\n",rank,current_array_size,isSorted(local_array,current_array_size),MPI_Wtime() - start_time) ;
     if (local_array!=NULL)free(local_array);
     
-   /* 
+    /*
     sleep(rank+2);
-    //printf("rank %d \n\n\n\n",rank);
+    printf("rank %d \n\n\n\n",rank);
     for(i=0;i<=current_array_size-1;i++){
             printf("%d\n",local_array[i]);
                         }      
@@ -158,16 +145,71 @@ int main(int argc, char *argv[])  {
     MPI_Comm_free(&current_comm);
     MPI_Barrier(MPI_COMM_WORLD);
     
-
-    if (rank==0){       
-        
+    if (rank==0){               
         UserChoice();
     }
-    
-
     MPI_Finalize();    
     exit(0);
 }
+
+
+
+
+int _getelement(int* local_array,int steps,int current_array_size,int color,int rank,int current_nproc,int nproc){
+    int position=current_array_size-1;
+    int LOW_SET=1;
+    int HIGH_SET=10;
+
+
+    int chunk=MULTIPLIER/nproc;
+    int floor=rank*chunk;
+    int ceilling=floor+current_nproc*chunk;
+
+    int diff=0;
+    //diff=MULTIPLIER/4 //for skewing;
+
+    if(color==-1){
+        int probable_median=(MULTIPLIER/2)+diff;
+        position=_find_closest_tomedian(local_array,current_array_size,probable_median);   
+    }
+    else if(color==LOW_SET){
+        int probable_median= (floor+ceilling)/2+diff;
+        //printf("probable low media found is %d and step is %d\n", probable_median, steps);        
+        position=_find_closest_tomedian(local_array,current_array_size,probable_median);
+        //printf("median found is%d\n", local_array[position]);
+    }
+    else if(color==HIGH_SET){
+        int probable_median=(floor+ceilling)/2+diff;
+        //printf("probable high median is %d and step is %d\n\n", probable_median,steps);
+        position=_find_closest_tomedian(local_array,current_array_size,probable_median);
+        //printf("median found is%d\n", local_array[position]);
+    }
+
+    
+
+    return local_array[position];
+}
+
+int _find_closest_tomedian(int* local_array,int current_array_size,int probable_median){
+    int i,position=current_array_size-1;
+    int best=abs(local_array[0]-probable_median);
+
+    for(i=0;i<current_array_size;i++){
+        int cmp=abs(local_array[i]-probable_median);
+
+        if (cmp<100){
+            position=i;
+            break;
+        }
+        else if(cmp<best){
+            best=cmp;
+            position=i;
+            }
+    }
+    return position;
+}
+
+
 
 
 
@@ -257,14 +299,6 @@ void partition_with_pivot(int low, int high, int* Array,int pivot,int** low_arra
         MPI_Abort(MPI_COMM_WORLD,2);
     }
 }
-
-
-int _getelement(){
-    return 2;
-}
-
-
-
 
 
 int* merge_arrays(int *array1, int array1_size,int *array2, int array2_size){

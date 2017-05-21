@@ -26,8 +26,9 @@ void myqsort(int low, int high,int *Array);
 int partition(int low, int high, int* Array);
 int* merge_arrays(int *array1, int array1_size,int *array2, int array2_size);
 void partition_with_pivot(int low, int high, int* Array,int pivot,int** low_array, int** high_array, int* low_array_size, int* high_array_size,int current_rank);
-int _getelement();
+int _getelement(int* local_array,int steps,int current_array_size,int color,int rank,int current_nproc,int nproc);
 void swap(int num1, int num2,int *Array);
+int _find_closest_tomedian(int* local_array,int current_array_size,int probable_median);
 
 
 
