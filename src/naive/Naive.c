@@ -62,11 +62,11 @@ int main(int argc, char *argv[])  {
 
     //steps=2;
     int dest=1;
+    //int dest2=1;
     for(i=1;i<=steps;i++){
-        
         int new_array_size=local_array_size*dest;
         
-        if (rank % (2*i)){
+        if (rank % (2*dest)){
             MPI_Send(local_array, new_array_size, MPI_INT, rank-dest, 10*i, MPI_COMM_WORLD); 
             break;
         }
@@ -79,7 +79,8 @@ int main(int argc, char *argv[])  {
             local_array=temp;            
             free(received_array);      
         }       
-    dest=2*i;        
+    dest=2*dest;
+          
     }
        
     
